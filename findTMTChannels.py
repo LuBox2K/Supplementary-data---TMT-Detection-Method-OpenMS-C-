@@ -204,14 +204,50 @@ def main():
     #    global_mz_accumulator = global_mz_accumulator[~(near_ion & too_small)]
 
 
-    quick_plot(global_mz_accumulator, global_int_accumulator, 'adjusted', oms.PeakPickerHiRes())
+    # quick_plot(global_mz_accumulator, global_int_accumulator, 'adjusted', oms.PeakPickerHiRes())
 
     ## quick_plot(global_mz_accumulator, global_int_accumulator, 'IterativePicker', oms.PeakPickerIterative())
     ## quick_plot(global_mz_accumulator, global_int_accumulator, 'ChromatogramPicker', oms.PeakPickerChromatogram()) #lol
     ## quick_plot(global_mz_accumulator, global_int_accumulator, 'IMPicker', oms.PeakPickerIM())
 
     generate_slices_and_print_pvals(global_mz_accumulator, global_int_accumulator)
-    plt.show()
+
+    print('#'*40, '\n## ↑noCorrection | mean↓ ##################################\n' + '#'*40)
+    decal = find_mean_decalibration(global_mz_accumulator, global_int_accumulator)
+    channel_locations += decal
+    bg_locations += decal
+    generate_slices_and_print_pvals(global_mz_accumulator, global_int_accumulator)
+    channel_locations -= decal
+    bg_locations -= decal
+
+    print('#'*40, '\n## ↑mean | median↓ ##################################\n' + '#'*40)
+    decal = find_median_decalibration(global_mz_accumulator, global_int_accumulator)
+    channel_locations += decal
+    bg_locations += decal
+    generate_slices_and_print_pvals(global_mz_accumulator, global_int_accumulator)
+    channel_locations -= decal
+    bg_locations -= decal
+
+    print('#'*40, '\n## ↑median | CubicSpline↓ ##################################\n' + '#'*40)
+    decal = find_cubic_decalibration(global_mz_accumulator, global_int_accumulator)
+    channel_locations += decal
+    bg_locations += decal
+    generate_slices_and_print_pvals(global_mz_accumulator, global_int_accumulator)
+    channel_locations -= decal
+    bg_locations -= decal
+
+    try:
+        print('#'*40, '\n## ↑CubicSpline | PeakPicking↓ ##################################\n' + '#'*40)
+        decal = find_peakpick_decalibration(global_mz_accumulator, global_int_accumulator)
+        channel_locations += decal
+        bg_locations += decal
+        generate_slices_and_print_pvals(global_mz_accumulator, global_int_accumulator)
+        channel_locations -= decal
+        bg_locations -= decal
+    except Exception as X:
+        printf('ERRORED')
+        #print(f'[{'FALSE '*35}]')
+
 
 def trim_save_exit(exp): ## must be oms Experiment
     maxlevel = np.max(exp.getMSLevels())
@@ -291,7 +327,7 @@ def generate_slices_and_print_pvals(global_mz_accumulator, global_int_accumulato
     print('SIGNIFICANT PVALUES: (↓ions | backgrouds→)\n', (p_vals < .05))
     print('SIGNIFICANT MEDIANS: (Ions→)\n', (nanmed < .05))
     print('PVAL MEDIANS with BH: (Ions→)\n', false_discovery_control(np.nan_to_num(nanmed, copy=False,nan=1.0), method='bh'))
-    print('SIGNIFICANT MEDIANS with BH: (Ions→)\n', np.where(false_discovery_control(np.nan_to_num(nanmed, copy=False,nan=1.0), method='bh') < 0.05))
+    print('SIGNIFICANT MEDIANS with BH: (Ions→)\n', (false_discovery_control(np.nan_to_num(nanmed, copy=False, nan=1.0), method='bh') < 0.05))
 
 
 def col(inp, r=0, g=0, b=0):
